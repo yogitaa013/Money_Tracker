@@ -8,38 +8,82 @@ function App() {
   const [transactions, setTransactions] = useState([]);
 
   useEffect(() => {
-    getTransactions().then(setTransactions);
+    console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
+    console.log('All env vars:', import.meta.env);
+    console.log('Component mounted, fetching transactions...');
+    getTransactions()
+      .then(data => {
+        console.log('Setting transactions:', data);
+        setTransactions(data);
+      })
+      .catch(error => {
+        console.error('Error in useEffect:', error);
+      });
   }, []);
 
   async function getTransactions() {
-    const url = import.meta.env.VITE_API_URL + '/transactions';
-    const response = await fetch(url);
-    return await response.json();
+    // Temporarily hardcode the URL to test connection
+    const url = 'http://localhost:4040/api/transactions';
+    console.log('Fetching from:', url);
+    
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log('Received data:', data);
+      return data;
+    } catch (error) {
+      console.error('Fetch error:', error);
+      return [];
+    }
   }
 
   async function addNewTransaction(ev) {
     ev.preventDefault();
-    const url = import.meta.env.VITE_API_URL + '/transaction';
-    const price = name.split(' ')[0];
+    // Temporarily hardcode the URL to test connection
+    const url = 'http://localhost:4040/api/transaction';
+    console.log('Posting to:', url);
+    
+    const parts = name.split(' ');
+    const price = parts[0];
+    const transactionName = parts.slice(1).join(' '); // Join all parts after the first
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        price,
-        name: name.substring(price.length + 1),
-        description,
-        datetime
-      })
-    });
+    // Better data preparation
+    const transactionData = {
+      price: parseFloat(price), // Ensure price is a number
+      name: transactionName || 'Unnamed transaction', // Fallback if no name provided
+      description,
+      datetime
+    };
+    
+    console.log('Sending data:', transactionData);
 
-    const json = await response.json();
-    setTransactions([...transactions, json]);
-    setName('');
-    setDatetime('');
-    setDescription('');
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(transactionData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Server response:', errorData);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const json = await response.json();
+      console.log('Transaction added:', json);
+      setTransactions([...transactions, json]);
+      setName('');
+      setDatetime('');
+      setDescription('');
+    } catch (error) {
+      console.error('Add transaction error:', error);
+    }
   }
 
   let balance = 0;
